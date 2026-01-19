@@ -1,0 +1,376 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+// ====================================================
+// GENERATOR & DATASOURCE
+// ====================================================
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ====================================================
+// ENUMS
+// ====================================================
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum AttachmentType {
+  IMAGE
+  LINK
+  OTHER
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+  TRANSFER
+}
+
+enum PlanStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+}
+
+enum NotificationChannel {
+  EMAIL
+  SMS
+  PUSH
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+// ====================================================
+// USER + AUTH SYSTEM
+// ====================================================
+model User {
+  id           Int      @id @default(autoincrement())
+  name         String
+  email        String   @unique
+  passwordHash String
+
+  contactNo    String?
+  birthDate    DateTime?
+  nationality  String?
+  gender       Gender?
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // relations
+  sessions        Session[]
+  roles           UserRole[]
+  projectsCreated Project[]        @relation("ProjectsCreated")
+  tasksAssigned   Task[]           @relation("TasksAssigned")
+  tags            Tag[]            @relation("UserTags")
+  notes           Note[]
+  schedules       Schedule[]
+  plans           Plan[]
+  walletAccounts  WalletAccount[]
+  transactions    WalletTransaction[]
+  notifications   Notification[]
+  streak          Streak?
+
+  taskInstances   TaskInstance[]
+  comments        TaskComment[]
+  histories       TaskHistory[]
+}
+
+model Session {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  token     String   @unique
+  ip        String?
+  userAgent String?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ====================================================
+// ROLE SYSTEM
+// ====================================================
+model Role {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  createdAt DateTime @default(now())
+
+  userRoles UserRole[]
+}
+
+model UserRole {
+  id     Int @id @default(autoincrement())
+  userId Int
+  roleId Int
+
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId])
+}
+
+// ====================================================
+// PROJECT MANAGEMENT
+// ====================================================
+model Project {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  createdById Int
+  createdAt   DateTime @default(now())
+
+  createdBy   User      @relation("ProjectsCreated", fields: [createdById], references: [id])
+  taskLists   TaskList[]
+}
+
+model TaskList {
+  id        Int      @id @default(autoincrement())
+  name      String
+  projectId Int
+  createdAt DateTime @default(now())
+
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tasks     Task[]
+}
+
+// ====================================================
+// TASK SYSTEM
+// ====================================================
+model Task {
+  id           Int        @id @default(autoincrement())
+  title        String
+  description  String?
+  priority     Priority   @default(MEDIUM)
+  status       TaskStatus @default(PENDING)
+  dueDate      DateTime?
+
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  listId       Int?
+  assignedToId Int?
+  scheduleId   Int?
+
+  list         TaskList? @relation(fields: [listId], references: [id], onDelete: Cascade)
+  assignedTo   User?     @relation("TasksAssigned", fields: [assignedToId], references: [id])
+  schedule     Schedule? @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+
+  instances    TaskInstance[]
+  comments     TaskComment[]
+  histories    TaskHistory[]
+}
+
+model TaskComment {
+  id        Int      @id @default(autoincrement())
+  taskId    Int
+  userId    Int
+  comment   String
+  createdAt DateTime @default(now())
+
+  task      Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user      User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model TaskHistory {
+  id         Int      @id @default(autoincrement())
+  taskId     Int
+  userId     Int
+  changeType String
+  changeTime DateTime @default(now())
+
+  task       Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user       User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ====================================================
+// DAILY SCHEDULE SYSTEM
+// ====================================================
+model Schedule {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  name      String
+  timezone  String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  user      User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tasks     Task[]
+}
+
+model TaskInstance {
+  id               Int      @id @default(autoincrement())
+  taskId           Int
+  userId           Int
+  scheduledFor     DateTime
+  completed        Boolean  @default(false)
+  completedAt      DateTime?
+  notificationSent Boolean  @default(false)
+  createdAt        DateTime @default(now())
+
+  task             Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user             User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, scheduledFor])
+}
+
+// ====================================================
+// NOTES SYSTEM
+// ====================================================
+model Note {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  title     String
+  content   String
+  pinned    Boolean  @default(false)
+  important Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  attachments NoteAttachment[]
+  tags        NoteTag[]
+}
+
+model NoteAttachment {
+  id        Int            @id @default(autoincrement())
+  noteId    Int
+  type      AttachmentType
+  url       String
+  filename  String?
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  note      Note @relation(fields: [noteId], references: [id], onDelete: Cascade)
+}
+
+model Tag {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  name      String
+  createdAt DateTime @default(now())
+
+  user      User @relation("UserTags", fields: [userId], references: [id], onDelete: Cascade)
+  notes     NoteTag[]
+
+  @@unique([userId, name])
+}
+
+model NoteTag {
+  id     Int @id @default(autoincrement())
+  noteId Int
+  tagId  Int
+
+  note   Note @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  tag    Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([noteId, tagId])
+}
+
+// ====================================================
+// PLANS
+// ====================================================
+model Plan {
+  id           Int        @id @default(autoincrement())
+  userId       Int
+  title        String
+  description  String?
+  dueDate      DateTime?
+  pinned       Boolean    @default(false)
+  important    Boolean    @default(false)
+  status       PlanStatus @default(PENDING)
+  reminderSent Boolean    @default(false)
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user         User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ====================================================
+// FINANCE
+// ====================================================
+model WalletAccount {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  name      String   @default("Main Wallet")
+  currency  String   @default("INR")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user         User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions WalletTransaction[]
+}
+
+model WalletTransaction {
+  id           Int      @id @default(autoincrement())
+  userId       Int
+  accountId    Int
+  amount       Decimal  @db.Decimal(12, 2)
+  type         TransactionType
+  category     String?
+  note         String?
+  counterparty String?
+  occurredAt   DateTime @default(now())
+  createdAt    DateTime @default(now())
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account      WalletAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([userId, occurredAt])
+}
+
+// ====================================================
+// NOTIFICATIONS
+// ====================================================
+model Notification {
+  id           Int      @id @default(autoincrement())
+  userId       Int
+  channel      NotificationChannel
+  payload      Json
+  scheduledFor DateTime?
+  sentAt       DateTime?
+  delivered    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  user         User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ====================================================
+// STREAK
+// ====================================================
+model Streak {
+  id                Int      @id @default(autoincrement())
+  userId            Int      @unique
+  currentStreak     Int      @default(0)
+  bestStreak        Int      @default(0)
+  lastSuccessDate   DateTime?
+  consecutiveMisses Int      @default(0)
+  updatedAt         DateTime @updatedAt
+
+  user              User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
