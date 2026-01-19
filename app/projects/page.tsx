@@ -1,81 +1,49 @@
 import Link from "next/link";
 import { getProjects, deleteProject } from "./actions";
-import {
-  PlusIcon,
-  FolderIcon,
-  PencilSquareIcon,
-  TrashIcon,
-  ArrowRightIcon,
-} from "@heroicons/react/24/outline";
+import { Plus, FolderKanban, Pencil, Trash2, ArrowRight, FolderOpen } from "lucide-react";
 
 export default async function ProjectsPage() {
   const projects = await getProjects();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-slate-100 relative overflow-hidden">
-      
-      {/* Animated background (same language as Dashboard) */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute -top-40 -left-40 w-96 h-96 bg-blue-300/30 rounded-full blur-3xl animate-[floatRandom1_18s_ease-in-out_infinite]" />
-        <div className="absolute top-1/3 -right-40 w-96 h-96 bg-green-200/30 rounded-full blur-3xl animate-[floatRandom2_22s_ease-in-out_infinite]" />
-        <div className="absolute -bottom-40 left-1/3 w-96 h-96 bg-blue-400/20 rounded-full blur-3xl animate-[floatRandom3_20s_ease-in-out_infinite]" />
-      </div>
-
-      <style>{`
-        @keyframes floatRandom1 {
-          0% { transform: translate(0, 0); }
-          50% { transform: translate(120px, 80px); }
-          100% { transform: translate(0, 0); }
-        }
-        @keyframes floatRandom2 {
-          0% { transform: translate(0, 0); }
-          50% { transform: translate(-120px, 100px); }
-          100% { transform: translate(0, 0); }
-        }
-        @keyframes floatRandom3 {
-          0% { transform: translate(0, 0); }
-          50% { transform: translate(80px, -120px); }
-          100% { transform: translate(0, 0); }
-        }
-      `}</style>
-
-      <div className="max-w-7xl mx-auto px-6 py-10 relative z-10 space-y-10">
+    <div className="min-h-screen p-6 lg:p-10">
+      <div className="max-w-[1400px] mx-auto space-y-8">
 
         {/* HEADER */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-900 via-slate-800 to-slate-700">
+            <h1 className="text-3xl font-bold text-white tracking-tight">
               Projects
             </h1>
-            <p className="text-slate-600 mt-2">
+            <p className="text-zinc-400 mt-1">
               Manage and organize your workspaces
             </p>
           </div>
 
           <Link
             href="/projects/new"
-            className="inline-flex items-center gap-2 bg-gradient-to-br from-blue-600 to-blue-700 text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-blue-500/30 hover:shadow-xl hover:scale-105 transition-all duration-300"
+            className="group flex items-center gap-2 bg-white text-zinc-900 px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-zinc-100 transition-all shadow-lg shadow-white/5"
           >
-            <PlusIcon className="w-5 h-5" />
+            <Plus className="w-4 h-4 group-hover:rotate-90 transition-transform duration-200" />
             New Project
           </Link>
-        </div>
+        </header>
 
         {/* EMPTY STATE */}
         {projects.length === 0 ? (
-          <div className="bg-white/70 backdrop-blur-xl rounded-3xl border border-dashed border-slate-200 p-16 text-center shadow-lg shadow-slate-200/40">
-            <FolderIcon className="w-16 h-16 text-slate-300 mx-auto mb-6" />
-            <h3 className="text-xl font-semibold text-slate-900">
+          <div className="bg-zinc-900/60 backdrop-blur-sm rounded-2xl border-2 border-dashed border-zinc-700 p-16 text-center">
+            <FolderOpen className="w-16 h-16 text-zinc-600 mx-auto mb-6" />
+            <h3 className="text-xl font-semibold text-white mb-2">
               No projects yet
             </h3>
-            <p className="text-slate-500 mt-2 mb-6">
+            <p className="text-zinc-500 mb-6">
               Create your first project to get started.
             </p>
             <Link
               href="/projects/new"
-              className="inline-flex items-center gap-2 text-blue-600 font-semibold hover:text-blue-700"
+              className="inline-flex items-center gap-2 text-white font-semibold hover:text-zinc-300 transition-colors"
             >
-              Create Project <ArrowRightIcon className="w-4 h-4" />
+              Create Project <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
         ) : (
@@ -84,32 +52,32 @@ export default async function ProjectsPage() {
             {projects.map((project) => (
               <div
                 key={project.id}
-                className="group relative bg-white/70 backdrop-blur-xl rounded-2xl border border-white/60 p-6 shadow-lg shadow-slate-200/40 hover:shadow-xl hover:scale-[1.02] transition-all duration-300 flex flex-col justify-between"
+                className="group relative bg-zinc-900/60 backdrop-blur-sm rounded-2xl border border-zinc-800/80 p-6 hover:border-zinc-700 hover:bg-zinc-900/80 transition-all duration-300 flex flex-col justify-between"
               >
                 <div>
                   {/* TOP */}
                   <div className="flex justify-between items-start mb-4">
-                    <div className="p-3 bg-gradient-to-br from-blue-100 to-blue-200 rounded-xl text-blue-700 shadow-sm">
-                      <FolderIcon className="w-6 h-6" />
+                    <div className="p-3 bg-indigo-500/10 rounded-xl text-indigo-400 border border-indigo-500/20">
+                      <FolderKanban className="w-6 h-6" />
                     </div>
 
                     {/* ACTIONS */}
                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <Link
                         href={`/projects/${project.id}/edit`}
-                        className="p-2 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition"
+                        className="p-2 rounded-lg text-zinc-500 hover:text-blue-400 hover:bg-blue-500/10 transition"
                         title="Edit Project"
                       >
-                        <PencilSquareIcon className="w-5 h-5" />
+                        <Pencil className="w-4 h-4" />
                       </Link>
                       <form action={deleteProject}>
                         <input type="hidden" name="projectId" value={project.id} />
                         <button
                           type="submit"
-                          className="p-2 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition"
+                          className="p-2 rounded-lg text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition"
                           title="Delete Project"
                         >
-                          <TrashIcon className="w-5 h-5" />
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </form>
                     </div>
@@ -117,10 +85,10 @@ export default async function ProjectsPage() {
 
                   {/* CONTENT */}
                   <Link href={`/projects/${project.id}`} className="block">
-                    <h2 className="text-xl font-semibold text-slate-900 group-hover:text-blue-600 transition-colors">
+                    <h2 className="text-xl font-semibold text-white group-hover:text-indigo-400 transition-colors">
                       {project.name}
                     </h2>
-                    <p className="text-sm text-slate-600 mt-2 line-clamp-2">
+                    <p className="text-sm text-zinc-500 mt-2 line-clamp-2">
                       {project.description ||
                         "No description provided for this project."}
                     </p>
@@ -128,16 +96,16 @@ export default async function ProjectsPage() {
                 </div>
 
                 {/* FOOTER */}
-                <div className="mt-6 pt-4 border-t border-slate-200/60 flex justify-between items-center">
+                <div className="mt-6 pt-4 border-t border-zinc-800 flex justify-between items-center">
                   <Link
                     href={`/projects/${project.id}`}
-                    className="text-sm font-semibold text-blue-600 flex items-center gap-1 group/btn"
+                    className="text-sm font-semibold text-zinc-400 hover:text-white flex items-center gap-1 group/btn transition-colors"
                   >
                     View Tasks
-                    <ArrowRightIcon className="w-4 h-4 transition-transform group-hover/btn:translate-x-1" />
+                    <ArrowRight className="w-4 h-4 transition-transform group-hover/btn:translate-x-1" />
                   </Link>
 
-                  <span className="text-[10px] font-bold tracking-widest text-slate-400">
+                  <span className="text-[10px] font-bold tracking-widest text-zinc-600">
                     ID · {project.id}
                   </span>
                 </div>

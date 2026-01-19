@@ -7,13 +7,13 @@ export default function ProjectsLayout({
   children: ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-slate-100">
-      
+    <div className="min-h-screen bg-zinc-950 text-zinc-100">
+
       {/* Sidebar */}
       <DashboardSidebar />
 
       {/* Page Content */}
-      <main className="ml-72 min-h-screen overflow-y-auto">
+      <main className="ml-72 min-h-screen">
         {children}
       </main>
 
