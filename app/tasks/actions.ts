@@ -314,3 +314,100 @@ export async function updateTask(
     `/projects/${task.list.projectId}/lists/${task.listId}/tasks`
   );
 }
+
+/* ===============================
+   GET ALL TASKS (for /tasks page)
+================================ */
+export async function getAllTasks() {
+  const user = await getUserFromSession();
+  if (!user) throw new Error("Unauthorized");
+
+  return prisma.task.findMany({
+    where: {
+      list: {
+        project: {
+          createdById: user.id,
+        },
+      },
+    },
+    include: {
+      list: {
+        include: {
+          project: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      },
+    },
+    orderBy: [
+      { pinned: "desc" },
+      { createdAt: "desc" },
+    ],
+  });
+}
+
+/* ===============================
+   TOGGLE TASK PIN
+================================ */
+export async function toggleTaskPin(taskId: number) {
+  const user = await getUserFromSession();
+  if (!user) throw new Error("Unauthorized");
+
+  const task = await prisma.task.findUnique({
+    where: { id: taskId },
+    include: {
+      list: { include: { project: true } },
+    },
+  });
+
+  if (!task) throw new Error("Task not found");
+
+  if (task.list?.project.createdById !== user.id) {
+    throw new Error("Forbidden");
+  }
+
+  await prisma.task.update({
+    where: { id: taskId },
+    data: { pinned: !task.pinned },
+  });
+
+  const { revalidatePath } = await import("next/cache");
+  revalidatePath("/tasks");
+  revalidatePath("/dashboard");
+}
+
+/* ===============================
+   GET PINNED TASKS (for dashboard)
+================================ */
+export async function getPinnedTasks() {
+  const user = await getUserFromSession();
+  if (!user) throw new Error("Unauthorized");
+
+  return prisma.task.findMany({
+    where: {
+      pinned: true,
+      list: {
+        project: {
+          createdById: user.id,
+        },
+      },
+    },
+    include: {
+      list: {
+        include: {
+          project: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      },
+    },
+    orderBy: { updatedAt: "desc" },
+    take: 10,
+  });
+}

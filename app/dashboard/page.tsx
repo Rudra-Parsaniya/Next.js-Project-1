@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getUserFromSession } from "@/lib/auth";
 import { getDashboardStats } from "./actions";
+import { getPinnedTasks } from "../tasks/actions";
 import React from "react";
 import {
   ArrowUpRight,
@@ -14,7 +15,8 @@ import {
   Calendar,
   Activity,
   TrendingUp,
-  Zap
+  Zap,
+  Pin
 } from "lucide-react";
 
 export default async function DashboardPage() {
@@ -22,6 +24,7 @@ export default async function DashboardPage() {
   if (!user) return null;
 
   const stats = await getDashboardStats();
+  const pinnedTasks = await getPinnedTasks();
 
   const completionRate = stats.totalTasks > 0
     ? Math.round((stats.completedTasks / stats.totalTasks) * 100)
@@ -209,6 +212,44 @@ export default async function DashboardPage() {
             />
           </div>
         </section>
+
+        {/* PINNED TASKS SECTION */}
+        {pinnedTasks.length > 0 && (
+          <section>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Pin className="w-4 h-4 text-amber-400" />
+                <h2 className="text-lg font-semibold text-white">Pinned Tasks</h2>
+              </div>
+              <Link href="/tasks" className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors">
+                View all tasks
+              </Link>
+            </div>
+            <div className="flex gap-4 overflow-x-auto pb-4 -mx-2 px-2 scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent">
+              {pinnedTasks.map((task: any) => (
+                <div
+                  key={task.id}
+                  className="flex-shrink-0 w-72 bg-zinc-900/60 backdrop-blur-sm rounded-2xl border border-amber-500/20 p-4 hover:border-amber-500/40 transition-all duration-300"
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <span className="text-xs font-medium text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded">
+                      {task.list?.project?.name || "Project"}
+                    </span>
+                    <Pin className="w-3 h-3 text-amber-400 fill-current" />
+                  </div>
+                  <h3 className="text-sm font-semibold text-white mb-1 line-clamp-1">
+                    {task.title}
+                  </h3>
+                  {task.description && (
+                    <p className="text-xs text-zinc-500 line-clamp-2">
+                      {task.description}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
       </div>
     </div>
