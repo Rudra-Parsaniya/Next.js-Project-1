@@ -1,86 +1,131 @@
 "use client";
-import { loginUser } from "./actions";
+
 import Link from "next/link";
-import { Lock, Mail } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+
+import Background from "../../components/Background";
 
 export default function LoginPage() {
-  async function handleSubmit(formData: FormData) {
-    await loginUser(formData);
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    // ... existing logic ...
+    event.preventDefault();
+    setLoading(true);
+    setError(null);
+
+    const formData = new FormData(event.currentTarget);
+    const data = Object.fromEntries(formData);
+
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        setError(result.error || "Login failed");
+      } else {
+        const redirectPath = result.isAdmin ? "/admin" : "/dashboard";
+        router.push(redirectPath);
+        router.refresh();
+      }
+    } catch (err) {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-zinc-950 px-4 relative overflow-hidden">
-      {/* Subtle Background Gradient */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl" />
-      </div>
+    <div className="min-h-screen flex items-center justify-center px-4 py-12 relative overflow-hidden">
+      <Background />
 
-      <div className="w-full max-w-md bg-zinc-900/80 backdrop-blur-xl p-8 rounded-2xl border border-zinc-800 relative z-10 shadow-2xl">
+      <div className="w-full max-w-md bg-zinc-900/50 backdrop-blur-sm p-8 rounded-2xl border border-zinc-800/50 relative z-10 shadow-2xl">
+        <div className="mb-8 text-center">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 text-sm text-zinc-400 hover:text-white transition-colors mb-8"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Home
+          </Link>
 
-        {/* Logo/Brand */}
-        <div className="text-center mb-8">
-          <div className="w-12 h-12 bg-gradient-to-br from-white/10 to-white/5 rounded-xl flex items-center justify-center border border-white/10 mx-auto mb-4">
-            <span className="text-white font-bold text-lg">NP</span>
-          </div>
-          <h1 className="text-2xl font-bold text-white mb-1">
+          <h1 className="text-3xl font-bold text-white tracking-tight mb-2">
             Welcome back
           </h1>
           <p className="text-sm text-zinc-500">
-            Sign in to your account to continue
+            Enter your credentials to access your workspace
           </p>
         </div>
 
-        {/* Form */}
-        <form action={handleSubmit} className="space-y-5">
-          <div>
-            <label className="block text-sm font-medium text-zinc-400 mb-2">
-              Email
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-2">
+            <label htmlFor="email" className="block text-sm font-medium text-zinc-400 mb-2">
+              Email Address
             </label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
-              <input
-                type="email"
-                name="email"
-                placeholder="you@example.com"
-                required
-                className="w-full bg-zinc-800/50 border border-zinc-700 text-white rounded-xl pl-11 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/50 hover:border-zinc-500 hover:bg-zinc-800/70 transition-all placeholder:text-zinc-600"
-              />
-            </div>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              required
+              className="w-full bg-zinc-800/50 border border-zinc-700 text-white rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/50 hover:border-zinc-500 hover:bg-zinc-800/70 transition-all placeholder:text-zinc-600"
+              placeholder="name@example.com"
+            />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-zinc-400 mb-2">
+          <div className="space-y-2">
+            <label htmlFor="password" className="block text-sm font-medium text-zinc-400 mb-2">
               Password
             </label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
-              <input
-                type="password"
-                name="password"
-                placeholder="••••••••"
-                required
-                className="w-full bg-zinc-800/50 border border-zinc-700 text-white rounded-xl pl-11 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/50 hover:border-zinc-500 hover:bg-zinc-800/70 transition-all placeholder:text-zinc-600"
-              />
-            </div>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              required
+              className="w-full bg-zinc-800/50 border border-zinc-700 text-white rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/50 hover:border-zinc-500 hover:bg-zinc-800/70 transition-all placeholder:text-zinc-600"
+              placeholder="••••••••"
+            />
           </div>
+
+          {error && (
+            <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm text-center font-medium">
+              {error}
+            </div>
+          )}
 
           <button
             type="submit"
-            className="w-full bg-blue-600 text-white py-3 rounded-xl font-semibold hover:bg-blue-500 transition-all shadow-lg shadow-blue-500/20"
+            disabled={loading}
+            className="w-full bg-blue-600 text-white font-semibold rounded-xl px-4 py-3.5 hover:bg-blue-500 transition-all shadow-lg shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
-            Sign in
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Signing in...
+              </>
+            ) : (
+              "Sign in"
+            )}
           </button>
         </form>
 
-        {/* Footer */}
-        <p className="text-center text-sm text-zinc-500 mt-6">
-          Don&apos;t have an account?{" "}
-          <Link href="/register" className="text-white font-semibold hover:text-zinc-300 transition-colors">
-            Create one
-          </Link>
-        </p>
+        <div className="mt-6 text-center">
+          <p className="text-sm text-zinc-500">
+            Don&apos;t have an account?{" "}
+            <Link href="/register" className="text-white hover:underline font-medium">
+              Create account
+            </Link>
+          </p>
+        </div>
       </div>
-    </main>
+    </div>
   );
 }

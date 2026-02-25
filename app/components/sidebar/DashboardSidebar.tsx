@@ -3,33 +3,52 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, User, FolderKanban, ListTodo, LogOut, Settings, HelpCircle } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { logoutAction } from "@/app/dashboard/logout-action";
 
 export default function DashboardSidebar() {
   const pathname = usePathname();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   const isActive = (path: string) => pathname === path || pathname.startsWith(path + '/');
+
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then(res => res.json())
+      .then(data => {
+        setUser(data);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
-      await logoutAction();
+      await fetch("/api/auth/logout", { method: "POST" });
+      window.location.href = "/login";
     } catch (error) {
       setIsLoggingOut(false);
       console.error("Logout error:", error);
     }
   };
 
-  const mainNavItems = [
+  const isAdmin = user?.roles?.some((r: any) => r.role.name === "ADMIN");
+
+  const mainNavItems = isAdmin ? [
+    { href: "/admin", label: "Home", icon: LayoutDashboard },
+    { href: "/admin/users", label: "Users", icon: User },
+    { href: "/projects", label: "Projects", icon: FolderKanban },
+  ] : [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/projects", label: "Projects", icon: FolderKanban },
     { href: "/tasks", label: "Tasks", icon: ListTodo },
   ];
 
   const secondaryNavItems = [
-    { href: "/users/me", label: "Profile", icon: User },
+    { href: "/profile", label: "Profile", icon: User },
     { href: "/settings", label: "Settings", icon: Settings },
   ];
 
@@ -59,8 +78,8 @@ export default function DashboardSidebar() {
               key={href}
               href={href}
               className={`group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${isActive(href)
-                  ? "bg-white/10 text-white"
-                  : "text-zinc-500 hover:bg-white/5 hover:text-zinc-300"
+                ? "bg-white/10 text-white"
+                : "text-zinc-500 hover:bg-white/5 hover:text-zinc-300"
                 }`}
             >
               <Icon className={`w-5 h-5 transition-colors duration-200 ${isActive(href) ? "text-white" : "text-zinc-500 group-hover:text-zinc-300"}`} />
@@ -83,8 +102,8 @@ export default function DashboardSidebar() {
               key={href}
               href={href}
               className={`group flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 ${isActive(href)
-                  ? "bg-white/10 text-white"
-                  : "text-zinc-500 hover:bg-white/5 hover:text-zinc-300"
+                ? "bg-white/10 text-white"
+                : "text-zinc-500 hover:bg-white/5 hover:text-zinc-300"
                 }`}
             >
               <Icon className={`w-4 h-4 transition-colors duration-200 ${isActive(href) ? "text-white" : "text-zinc-500 group-hover:text-zinc-300"}`} />

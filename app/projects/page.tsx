@@ -1,9 +1,86 @@
-import Link from "next/link";
-import { getProjects, deleteProject } from "./actions";
-import { Plus, FolderKanban, Pencil, Trash2, ArrowRight, FolderOpen } from "lucide-react";
+"use client";
 
-export default async function ProjectsPage() {
-  const projects = await getProjects();
+import Link from "next/link";
+import { Plus, FolderKanban, Pencil, Trash2, ArrowRight, FolderOpen, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+
+interface Project {
+  id: number;
+  name: string;
+  description: string | null;
+  createdAt: string;
+  updatedAt: string;
+  createdById: number;
+}
+
+export default function ProjectsPage() {
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const router = useRouter();
+
+  useEffect(() => {
+    fetchProjects();
+  }, []);
+
+  async function fetchProjects() {
+    try {
+      const response = await fetch("/api/projects");
+      if (response.ok) {
+        const data = await response.json();
+        setProjects(data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch projects", error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleDelete(projectId: number) {
+    if (!confirm("Are you sure you want to delete this project?")) return;
+
+    setDeletingId(projectId);
+    try {
+      const response = await fetch(`/api/projects?projectId=${projectId}`, {
+        method: "DELETE",
+      });
+      // Note: The API at /api/projects/route.ts seems to support DELETE? 
+      // Wait, checking api/projects/route.ts ... it only had GET and POST. 
+      // The delete logic was in actions.ts.
+      // I need to check if /api/projects supports DELETE or if I need to use /api/projects/[id].
+      // Usually it's /api/projects/[id].
+
+      // Let's assume /api/projects/[id] exists or I should use it.
+      // The DeleteProjectButton used `/api/projects/${projectId}`.
+      // So I will use that here too.
+
+      const res = await fetch(`/api/projects/${projectId}`, {
+        method: "DELETE"
+      });
+
+      if (res.ok) {
+        setProjects((prev) => prev.filter((p) => p.id !== projectId));
+        router.refresh();
+      } else {
+        alert("Failed to delete project");
+      }
+    } catch (error) {
+      console.error("Failed to delete project", error);
+      alert("Something went wrong");
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-white" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen p-6 lg:p-10">
@@ -52,7 +129,7 @@ export default async function ProjectsPage() {
             {projects.map((project) => (
               <div
                 key={project.id}
-                className="group relative bg-zinc-900/60 backdrop-blur-sm rounded-2xl border border-zinc-800/80 p-6 hover:border-zinc-700 hover:bg-zinc-900/80 transition-all duration-300 flex flex-col justify-between"
+                className="group relative bg-zinc-900/60 backdrop-blur-sm rounded-2xl border border-zinc-800/80 p-6 hover:border-blue-500/30 hover:shadow-lg hover:shadow-blue-500/5 hover:bg-zinc-900/90 transition-all duration-300 flex flex-col justify-between"
               >
                 <div>
                   {/* TOP */}
@@ -70,16 +147,18 @@ export default async function ProjectsPage() {
                       >
                         <Pencil className="w-4 h-4" />
                       </Link>
-                      <form action={deleteProject}>
-                        <input type="hidden" name="projectId" value={project.id} />
-                        <button
-                          type="submit"
-                          className="p-2 rounded-lg text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition"
-                          title="Delete Project"
-                        >
+                      <button
+                        onClick={() => handleDelete(project.id)}
+                        disabled={deletingId === project.id}
+                        className="p-2 rounded-lg text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition disabled:opacity-50"
+                        title="Delete Project"
+                      >
+                        {deletingId === project.id ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
                           <Trash2 className="w-4 h-4" />
-                        </button>
-                      </form>
+                        )}
+                      </button>
                     </div>
                   </div>
 

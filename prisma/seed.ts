@@ -7,15 +7,15 @@ async function main() {
   console.log("🌱 Seeding roles...");
 
   await prisma.role.upsert({
-    where: { name: "admin" },
+    where: { name: "ADMIN" },
     update: {},
-    create: { name: "admin" },
+    create: { name: "ADMIN" },
   });
 
   await prisma.role.upsert({
-    where: { name: "user" },
+    where: { name: "USER" },
     update: {},
-    create: { name: "user" },
+    create: { name: "USER" },
   });
 
   console.log("✅ Roles seeded successfully");

@@ -1,36 +1,54 @@
 "use client";
 
 import React, { useState } from "react";
-import { registerUser } from "./actions";
 import Link from "next/link";
-import { User, Mail, Lock, Phone, Calendar, Globe, Users } from "lucide-react";
+import { User, Mail, Lock, Phone, Calendar, Globe, Users, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+
+import Background from "../../components/Background";
 
 export default function RegisterPage() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    // ... existing logic ...
     e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    const res = await registerUser(formData);
+    setLoading(true);
+    setError(null);
 
-    if (res?.error) setError(res.error);
+    const formData = new FormData(e.currentTarget);
+    const data = Object.fromEntries(formData);
+
+    try {
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        setError(result.error || "Registration failed");
+      } else {
+        router.push("/dashboard");
+        router.refresh();
+      }
+    } catch (err) {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-zinc-950 px-4 py-12 relative overflow-hidden">
-      {/* Subtle Background Gradient */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-0 right-1/4 w-96 h-96 bg-violet-500/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl" />
-      </div>
+    <main className="min-h-screen flex items-center justify-center px-4 py-12 relative overflow-hidden">
+      <Background />
 
-      <div className="w-full max-w-lg bg-zinc-900/80 backdrop-blur-xl p-8 rounded-2xl border border-zinc-800 relative z-10 shadow-2xl">
-
-        {/* Logo/Brand */}
+      <div className="w-full max-w-lg bg-zinc-900/50 backdrop-blur-sm p-8 rounded-2xl border border-zinc-800/50 relative z-10 shadow-2xl">
         <div className="text-center mb-8">
-          <div className="w-12 h-12 bg-gradient-to-br from-white/10 to-white/5 rounded-xl flex items-center justify-center border border-white/10 mx-auto mb-4">
-            <span className="text-white font-bold text-lg">NP</span>
-          </div>
           <h1 className="text-2xl font-bold text-white mb-1">
             Create Account
           </h1>
@@ -39,17 +57,13 @@ export default function RegisterPage() {
           </p>
         </div>
 
-        {/* Error */}
         {error && (
           <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-sm p-3 rounded-xl mb-6 text-center font-medium">
             {error}
           </div>
         )}
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-5">
-
-          {/* Name */}
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-zinc-400 mb-2">
               Full Name <span className="text-red-400">*</span>
@@ -66,7 +80,6 @@ export default function RegisterPage() {
             </div>
           </div>
 
-          {/* Email */}
           <div>
             <label className="block text-sm font-medium text-zinc-400 mb-2">
               Email <span className="text-red-400">*</span>
@@ -83,7 +96,6 @@ export default function RegisterPage() {
             </div>
           </div>
 
-          {/* Password */}
           <div>
             <label className="block text-sm font-medium text-zinc-400 mb-2">
               Password <span className="text-red-400">*</span>
@@ -100,26 +112,22 @@ export default function RegisterPage() {
             </div>
           </div>
 
-          {/* Grid Section */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-            {/* Contact */}
-            <div>
-              <label className="block text-sm font-medium text-zinc-400 mb-2">
-                Phone
-              </label>
-              <div className="relative">
-                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
-                <input
-                  type="text"
-                  name="contactNo"
-                  placeholder="+91 98765 43210"
-                  className="w-full bg-zinc-800/50 border border-zinc-700 text-white rounded-xl pl-11 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/50 hover:border-zinc-500 hover:bg-zinc-800/70 transition-all placeholder:text-zinc-600"
-                />
-              </div>
+          <div>
+            <label className="block text-sm font-medium text-zinc-400 mb-2">
+              Phone
+            </label>
+            <div className="relative">
+              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
+              <input
+                type="text"
+                name="contactNo"
+                placeholder="+91 98765 43210"
+                className="w-full bg-zinc-800/50 border border-zinc-700 text-white rounded-xl pl-11 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/50 hover:border-zinc-500 hover:bg-zinc-800/70 transition-all placeholder:text-zinc-600"
+              />
             </div>
+          </div>
 
-            {/* Birth Date */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-zinc-400 mb-2">
                 Birth Date
@@ -133,25 +141,23 @@ export default function RegisterPage() {
                 />
               </div>
             </div>
-          </div>
 
-          {/* Nationality */}
-          <div>
-            <label className="block text-sm font-medium text-zinc-400 mb-2">
-              Nationality
-            </label>
-            <div className="relative">
-              <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
-              <input
-                type="text"
-                name="nationality"
-                placeholder="Indian"
-                className="w-full bg-zinc-800/50 border border-zinc-700 text-white rounded-xl pl-11 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/50 hover:border-zinc-500 hover:bg-zinc-800/70 transition-all placeholder:text-zinc-600"
-              />
+            <div>
+              <label className="block text-sm font-medium text-zinc-400 mb-2">
+                Nationality
+              </label>
+              <div className="relative">
+                <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
+                <input
+                  type="text"
+                  name="nationality"
+                  placeholder="Indian"
+                  className="w-full bg-zinc-800/50 border border-zinc-700 text-white rounded-xl pl-11 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/50 hover:border-zinc-500 hover:bg-zinc-800/70 transition-all placeholder:text-zinc-600"
+                />
+              </div>
             </div>
           </div>
 
-          {/* Gender */}
           <div>
             <label className="block text-sm font-medium text-zinc-400 mb-2">
               Gender
@@ -170,16 +176,22 @@ export default function RegisterPage() {
             </div>
           </div>
 
-          {/* Submit */}
           <button
             type="submit"
-            className="w-full bg-blue-600 text-white py-3 rounded-xl font-semibold hover:bg-blue-500 transition-all shadow-lg shadow-blue-500/20"
+            disabled={loading}
+            className="w-full bg-blue-600 text-white py-3.5 rounded-xl font-semibold hover:bg-blue-500 transition-all shadow-lg shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-2"
           >
-            Create Account
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Creating Account...
+              </>
+            ) : (
+              "Create Account"
+            )}
           </button>
         </form>
 
-        {/* Footer */}
         <p className="text-center text-sm text-zinc-500 mt-6">
           Already have an account?{" "}
           <Link href="/login" className="text-white font-semibold hover:text-zinc-300 transition-colors">

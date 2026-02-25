@@ -1,7 +1,6 @@
+"use client";
+
 import Link from "next/link";
-import { getUserFromSession } from "@/lib/auth";
-import { getDashboardStats } from "./actions";
-import { getPinnedTasks } from "../tasks/actions";
 import React from "react";
 import {
   ArrowUpRight,
@@ -19,12 +18,47 @@ import {
   Pin
 } from "lucide-react";
 
-export default async function DashboardPage() {
-  const user = await getUserFromSession();
-  if (!user) return null;
+import Background from "../components/Background";
 
-  const stats = await getDashboardStats();
-  const pinnedTasks = await getPinnedTasks();
+export default function DashboardPage() {
+  // ... existing hooks ...
+  const [stats, setStats] = React.useState<any>(null);
+  const [pinnedTasks, setPinnedTasks] = React.useState<any[]>([]);
+  const [user, setUser] = React.useState<any>(null);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    // ... existing fetchData ...
+    async function fetchData() {
+      // ...
+      try {
+        const [statsRes, tasksRes, userRes] = await Promise.all([
+          fetch("/api/dashboard/stats"),
+          fetch("/api/tasks?pinned=true"),
+          fetch("/api/auth/me")
+        ]);
+
+        const statsData = statsRes.ok ? await statsRes.json() : null;
+        const tasksData = tasksRes.ok ? await tasksRes.json() : [];
+        const userData = userRes.ok ? await userRes.json() : null;
+
+        if (statsData) setStats(statsData);
+        if (Array.isArray(tasksData)) {
+          setPinnedTasks(tasksData.filter((t: any) => t.pinned).slice(0, 10));
+        }
+        if (userData) setUser(userData);
+      } catch (error) {
+        console.error("Failed to fetch dashboard data", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchData();
+  }, []);
+
+  if (loading) return <div className="min-h-screen flex items-center justify-center text-white">Loading...</div>;
+  if (!stats) return null;
+  if (!user) return null;
 
   const completionRate = stats.totalTasks > 0
     ? Math.round((stats.completedTasks / stats.totalTasks) * 100)
@@ -32,17 +66,12 @@ export default async function DashboardPage() {
 
   const currentHour = new Date().getHours();
   const greeting = currentHour < 12 ? "Good morning" : currentHour < 18 ? "Good afternoon" : "Good evening";
-
-  const date = new Date().toLocaleDateString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
+  const date = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
   return (
-    <div className="min-h-screen p-6 lg:p-10">
-      <div className="max-w-[1400px] mx-auto space-y-8">
+    <div className="min-h-screen p-6 lg:p-10 relative">
+      <Background />
+      <div className="max-w-[1400px] mx-auto space-y-8 relative z-10">
 
         {/* HEADER SECTION */}
         <header className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
@@ -69,44 +98,17 @@ export default async function DashboardPage() {
 
         {/* STATS ROW */}
         <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard
-            title="Total Projects"
-            value={stats.totalProjects}
-            href="/projects"
-            icon={<FolderKanban className="w-5 h-5" />}
-            color="indigo"
-          />
-          <StatCard
-            title="Total Tasks"
-            value={stats.totalTasks}
-            href="/tasks"
-            icon={<ListTodo className="w-5 h-5" />}
-            color="blue"
-          />
-          <StatCard
-            title="Pending"
-            value={stats.pendingTasks}
-            href="/tasks?status=PENDING"
-            icon={<Clock className="w-5 h-5" />}
-            color="amber"
-          />
-          <StatCard
-            title="Completed"
-            value={stats.completedTasks}
-            href="/tasks?status=COMPLETED"
-            icon={<CheckCircle2 className="w-5 h-5" />}
-            color="emerald"
-          />
+          <StatCard title="Total Projects" value={stats.totalProjects} href="/projects" icon={<FolderKanban className="w-5 h-5" />} color="indigo" />
+          <StatCard title="Total Tasks" value={stats.totalTasks} href="/tasks" icon={<ListTodo className="w-5 h-5" />} color="blue" />
+          <StatCard title="Pending" value={stats.pendingTasks} href="/tasks?status=PENDING" icon={<Clock className="w-5 h-5" />} color="amber" />
+          <StatCard title="Completed" value={stats.completedTasks} href="/tasks?status=COMPLETED" icon={<CheckCircle2 className="w-5 h-5" />} color="emerald" />
         </section>
 
         {/* MAIN CONTENT GRID */}
         <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
           {/* Progress Card */}
-          <div className="lg:col-span-2 bg-zinc-900/60 backdrop-blur-sm border border-zinc-800/80 rounded-2xl p-6 relative overflow-hidden">
-            {/* Subtle gradient accent */}
+          <div className="lg:col-span-2 bg-zinc-900/60 backdrop-blur-sm border border-zinc-800/80 rounded-2xl p-6 relative overflow-hidden transition-all duration-300 hover:border-blue-500/30 hover:shadow-lg hover:shadow-blue-500/5 hover:bg-zinc-900/90">
             <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
-
             <div className="relative z-10">
               <div className="flex items-start justify-between mb-8">
                 <div>
@@ -144,72 +146,30 @@ export default async function DashboardPage() {
           </div>
 
           {/* Recent Activity Card */}
-          <div className="bg-zinc-900/60 backdrop-blur-sm border border-zinc-800/80 rounded-2xl p-6">
+          <div className="bg-zinc-900/60 backdrop-blur-sm border border-zinc-800/80 rounded-2xl p-6 transition-all duration-300 hover:border-blue-500/30 hover:shadow-lg hover:shadow-blue-500/5 hover:bg-zinc-900/90">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-lg font-semibold text-white">Recent Activity</h3>
               <Link href="/activity" className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors">
                 View all
               </Link>
             </div>
-
             <div className="space-y-4">
-              <ActivityItem
-                title="New task created"
-                description="Design system updates"
-                time="2h ago"
-                color="blue"
-              />
-              <ActivityItem
-                title="Project completed"
-                description="Website redesign"
-                time="5h ago"
-                color="emerald"
-              />
-              <ActivityItem
-                title="Task updated"
-                description="API integration"
-                time="1d ago"
-                color="amber"
-              />
-              <ActivityItem
-                title="Comment added"
-                description="Review feedback"
-                time="2d ago"
-                color="violet"
-              />
+              <ActivityItem title="New task created" description="Design system updates" time="2h ago" color="blue" />
+              <ActivityItem title="Project completed" description="Website redesign" time="5h ago" color="emerald" />
+              <ActivityItem title="Task updated" description="API integration" time="1d ago" color="amber" />
+              <ActivityItem title="Comment added" description="Review feedback" time="2d ago" color="violet" />
             </div>
           </div>
-
         </section>
 
         {/* QUICK ACTIONS GRID */}
         <section>
           <h2 className="text-lg font-semibold text-white mb-4">Quick Actions</h2>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <QuickActionCard
-              title="All Projects"
-              description="View and manage workspaces"
-              href="/projects"
-              icon={<Briefcase className="w-5 h-5" />}
-            />
-            <QuickActionCard
-              title="My Tasks"
-              description="Check your daily todo list"
-              href="/tasks"
-              icon={<CheckCircle2 className="w-5 h-5" />}
-            />
-            <QuickActionCard
-              title="Calendar"
-              description="Schedule and timeline"
-              href="/calendar"
-              icon={<Calendar className="w-5 h-5" />}
-            />
-            <QuickActionCard
-              title="Board View"
-              description="Kanban project tracking"
-              href="/board"
-              icon={<LayoutGrid className="w-5 h-5" />}
-            />
+            <QuickActionCard title="All Projects" description="View and manage workspaces" href="/projects" icon={<Briefcase className="w-5 h-5" />} />
+            <QuickActionCard title="My Tasks" description="Check your daily todo list" href="/tasks" icon={<CheckCircle2 className="w-5 h-5" />} />
+            <QuickActionCard title="Calendar" description="Schedule and timeline" href="/calendar" icon={<Calendar className="w-5 h-5" />} />
+            <QuickActionCard title="Board View" description="Kanban project tracking" href="/board" icon={<LayoutGrid className="w-5 h-5" />} />
           </div>
         </section>
 
@@ -229,7 +189,7 @@ export default async function DashboardPage() {
               {pinnedTasks.map((task: any) => (
                 <div
                   key={task.id}
-                  className="flex-shrink-0 w-72 bg-zinc-900/60 backdrop-blur-sm rounded-2xl border border-amber-500/20 p-4 hover:border-amber-500/40 transition-all duration-300"
+                  className="flex-shrink-0 w-72 bg-zinc-900/60 backdrop-blur-sm rounded-2xl border border-amber-500/20 p-4 hover:border-blue-500/30 hover:shadow-lg hover:shadow-blue-500/5 hover:bg-zinc-900/80 transition-all duration-300"
                 >
                   <div className="flex items-start justify-between mb-2">
                     <span className="text-xs font-medium text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded">
@@ -250,7 +210,6 @@ export default async function DashboardPage() {
             </div>
           </section>
         )}
-
       </div>
     </div>
   );
@@ -286,7 +245,7 @@ function StatCard({
   return (
     <Link
       href={href}
-      className="group bg-zinc-900/60 backdrop-blur-sm border border-zinc-800/80 p-5 rounded-2xl hover:border-zinc-700 hover:bg-zinc-900/80 transition-all duration-300"
+      className="group bg-zinc-900/60 backdrop-blur-sm border border-zinc-800/80 p-5 rounded-2xl hover:border-blue-500/30 hover:shadow-lg hover:shadow-blue-500/5 hover:bg-zinc-900/90 transition-all duration-300"
     >
       <div className="flex items-start justify-between mb-4">
         <div className={`p-2.5 ${colors.bg} rounded-xl border ${colors.border}`}>
@@ -316,7 +275,7 @@ function QuickActionCard({
   return (
     <Link
       href={href}
-      className="group flex flex-col justify-center p-5 bg-zinc-900/40 border border-zinc-800/60 rounded-2xl hover:bg-zinc-900/70 hover:border-zinc-700 transition-all duration-300"
+      className="group flex flex-col justify-center p-5 bg-zinc-900/40 border border-zinc-800/60 rounded-2xl hover:bg-zinc-900/70 hover:border-blue-500/30 hover:shadow-lg hover:shadow-blue-500/5 transition-all duration-300"
     >
       <div className="flex items-center gap-3 mb-2">
         <div className="text-zinc-500 group-hover:text-white transition-colors duration-200">

@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import { prisma } from "./prisma";
 import { randomUUID } from "crypto";
 
-const SESSION_NAME = "session_token";
+export const SESSION_NAME = "session_token";
 
 // Create a new session for a user
 export async function createSession(userId: number) {
@@ -38,10 +38,25 @@ export async function getUserFromSession() {
 
   const session = await prisma.session.findUnique({
     where: { token },
-    include: { user: true },
+    include: {
+      user: {
+        include: {
+          roles: {
+            include: {
+              role: true
+            }
+          }
+        }
+      }
+    },
   });
 
   return session?.user ?? null;
+}
+
+// Check if a user object has the ADMIN role
+export async function isUserAdmin(user: any) {
+  return user?.roles?.some((r: any) => r.role.name === "ADMIN") ?? false;
 }
 
 // Logout the current user

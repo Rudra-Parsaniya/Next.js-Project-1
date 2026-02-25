@@ -1,7 +1,9 @@
+"use client";
+
 import Link from "next/link";
-import { getAllTasks } from "./actions";
-import { ListTodo, FolderKanban, Clock, CheckCircle2, AlertCircle, ArrowRight } from "lucide-react";
+import { ListTodo, FolderKanban, Clock, CheckCircle2, AlertCircle, ArrowRight, Loader2 } from "lucide-react";
 import PinTaskButton from "./PinTaskButton";
+import { useEffect, useState } from "react";
 
 const statusColors = {
     PENDING: { bg: "bg-amber-500/10", text: "text-amber-400", border: "border-amber-500/20" },
@@ -23,8 +25,49 @@ const statusIcons = {
     CANCELLED: AlertCircle,
 };
 
-export default async function TasksPage() {
-    const tasks = await getAllTasks();
+type Task = {
+    id: number;
+    title: string;
+    description: string | null;
+    status: keyof typeof statusColors;
+    priority: keyof typeof priorityColors;
+    pinned: boolean;
+    list: {
+        project: {
+            id: number;
+            name: string;
+        };
+    };
+};
+
+export default function TasksPage() {
+    const [tasks, setTasks] = useState<Task[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        async function fetchTasks() {
+            try {
+                const res = await fetch("/api/tasks");
+                if (res.ok) {
+                    const data = await res.json();
+                    setTasks(data);
+                }
+            } catch (error) {
+                console.error("Failed to fetch tasks", error);
+            } finally {
+                setLoading(false);
+            }
+        }
+        fetchTasks();
+    }, []);
+
+    if (loading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <Loader2 className="w-8 h-8 animate-spin text-white" />
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen p-6 lg:p-10">
@@ -63,9 +106,9 @@ export default async function TasksPage() {
                     /* TASKS LIST */
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {tasks.map((task) => {
-                            const StatusIcon = statusIcons[task.status];
-                            const statusColor = statusColors[task.status];
-                            const priorityColor = priorityColors[task.priority];
+                            const StatusIcon = statusIcons[task.status] || AlertCircle;
+                            const statusColor = statusColors[task.status] || statusColors.PENDING;
+                            const priorityColor = priorityColors[task.priority] || priorityColors.LOW;
                             const projectName = task.list?.project?.name || "Unknown Project";
                             const projectId = task.list?.project?.id;
 
@@ -73,7 +116,7 @@ export default async function TasksPage() {
                                 <div
                                     key={task.id}
                                     className={`group relative bg-zinc-900/60 backdrop-blur-sm rounded-2xl border ${task.pinned ? "border-amber-500/30" : "border-zinc-800/80"
-                                        } p-5 hover:border-zinc-700 hover:bg-zinc-900/80 transition-all duration-300`}
+                                        } p-5 hover:border-blue-500/30 hover:shadow-lg hover:shadow-blue-500/5 hover:bg-zinc-900/90 transition-all duration-300`}
                                 >
                                     {/* Project Badge - Top Right Corner */}
                                     <div className="absolute top-3 right-3">
