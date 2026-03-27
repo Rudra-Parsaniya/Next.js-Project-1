@@ -101,6 +101,7 @@ model Task {
   assignedTo   User?          @relation("TasksAssigned", fields: [assignedToId], references: [id])
   list         TaskList?      @relation(fields: [listId], references: [id], onDelete: Cascade)
   schedule     Schedule?      @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  submissionUrl String?
   comments     TaskComment[]
   histories    TaskHistory[]
   instances    TaskInstance[]
@@ -305,4 +306,6 @@ enum TaskStatus {
   IN_PROGRESS
   COMPLETED
   CANCELLED
+  UPLOADED
+  RE_SUBMISSION
 }

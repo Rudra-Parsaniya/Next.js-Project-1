@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { SESSION_NAME } from "@/lib/auth";
+import { SESSION_NAME } from "@/lib/session";
 
 const PUBLIC_PATHS = ["/login", "/register", "/"]; // pages NOT requiring login
 const PROTECTED_PATHS = ["/dashboard", "/projects", "/tasks"]; // pages requiring login

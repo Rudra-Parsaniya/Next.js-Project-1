@@ -24,6 +24,9 @@ export async function GET(
                 createdBy: {
                     select: { id: true, name: true, email: true },
                 },
+                assignedTo: {
+                    select: { id: true, name: true, email: true },
+                },
             },
         });
 
@@ -31,15 +34,10 @@ export async function GET(
             return NextResponse.json({ error: "Project not found" }, { status: 404 });
         }
 
-        const userWithRoles = await prisma.user.findUnique({
-            where: { id: user.id },
-            include: { roles: { include: { role: true } } },
-        });
+        const isAdmin = user.roles?.some((r: any) => r.role.name === "ADMIN") ?? false;
 
-        const isAdmin =
-            userWithRoles?.roles.some((r) => r.role.name === "ADMIN") ?? false;
-
-        if (!isAdmin && project.createdById !== user.id) {
+        const canAccess = project.createdById === user.id || project.assignedToId === user.id;
+        if (!isAdmin && !canAccess) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 
@@ -79,13 +77,7 @@ export async function PUT(
             return NextResponse.json({ error: "Project not found" }, { status: 404 });
         }
 
-        const userWithRoles = await prisma.user.findUnique({
-            where: { id: user.id },
-            include: { roles: { include: { role: true } } },
-        });
-
-        const isAdmin =
-            userWithRoles?.roles.some((r) => r.role.name === "ADMIN") ?? false;
+        const isAdmin = user.roles?.some((r: any) => r.role.name === "ADMIN") ?? false;
 
         if (!isAdmin && project.createdById !== user.id) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -129,13 +121,7 @@ export async function DELETE(
             return NextResponse.json({ error: "Project not found" }, { status: 404 });
         }
 
-        const userWithRoles = await prisma.user.findUnique({
-            where: { id: user.id },
-            include: { roles: { include: { role: true } } },
-        });
-
-        const isAdmin =
-            userWithRoles?.roles.some((r) => r.role.name === "ADMIN") ?? false;
+        const isAdmin = user.roles?.some((r: any) => r.role.name === "ADMIN") ?? false;
 
         if (!isAdmin && project.createdById !== user.id) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });

@@ -1,20 +1,24 @@
 "use client";
 
 import Link from "next/link";
-import { Plus, CheckCircle2, Clock, Trash2, Save, ArrowLeft, Loader2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Plus, CheckCircle2, Clock, Trash2, Save, ArrowLeft, Loader2, Upload, ExternalLink, XCircle, FileText } from "lucide-react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 
-// Define Task type roughly matching what we expect from API
+// Define Task type matching the updated Prisma schema
+type TaskStatus = "PENDING" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED" | "UPLOADED" | "RE_SUBMISSION";
+
 type Task = {
   id: number;
   title: string;
   description: string | null;
-  status: "PENDING" | "COMPLETED";
+  status: TaskStatus;
   listId: number;
   assignedToId: number | null;
   dueDate: string | null;
+  submissionUrl?: string | null;
   assignedTo?: {
+    id: number;
     name: string;
     email: string;
   };
@@ -36,6 +40,8 @@ export default function TasksPage() {
 
   const [user, setUser] = useState<any>(null);
   const [users, setUsers] = useState<any[]>([]);
+  const [uploadingId, setUploadingId] = useState<number | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!listId || isNaN(listId)) return;
@@ -118,31 +124,47 @@ export default function TasksPage() {
     }
   }
 
-  async function handleToggleStatus(task: Task) {
-    const newStatus: "PENDING" | "COMPLETED" = task.status === "COMPLETED" ? "PENDING" : "COMPLETED";
-
-    // Optimistic update
-    const updatedTasks = tasks.map((t) =>
-      t.id === task.id ? { ...t, status: newStatus } : t
-    );
-    setTasks(updatedTasks);
-
+  async function updateTaskStatus(taskId: number, newStatus: TaskStatus, submissionUrl?: string) {
     try {
-      const res = await fetch(`/api/tasks/${task.id}`, {
+      const res = await fetch(`/api/tasks/${taskId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({ status: newStatus, submissionUrl }),
       });
 
-      if (!res.ok) {
-        // Revert on failure
-        setTasks(tasks);
-      } else {
-        router.refresh(); // Sync with server for stats etc.
+      if (res.ok) {
+        const updated = await res.json();
+        setTasks(tasks.map(t => t.id === taskId ? updated : t));
+        router.refresh();
       }
     } catch (error) {
       console.error("Failed to update status", error);
-      setTasks(tasks);
+    }
+  }
+
+  async function handleFileUpload(taskId: number, file: File) {
+    setUploadingId(taskId);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("taskId", taskId.toString());
+
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (res.ok) {
+        const { submissionUrl } = await res.json();
+        await updateTaskStatus(taskId, "UPLOADED", submissionUrl);
+        alert("File uploaded successfully!");
+      } else {
+        alert("Failed to upload file");
+      }
+    } catch (error) {
+      console.error("Upload Error:", error);
+    } finally {
+      setUploadingId(null);
     }
   }
 
@@ -169,9 +191,18 @@ export default function TasksPage() {
     }
   }
 
+  const getStatusDisplay = (status: TaskStatus) => {
+    switch (status) {
+      case "COMPLETED": return { label: "Completed", color: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20", icon: <CheckCircle2 className="w-3 h-3" /> };
+      case "UPLOADED": return { label: "Uploaded", color: "bg-blue-500/10 text-blue-400 border-blue-500/20", icon: <Upload className="w-3 h-3" /> };
+      case "RE_SUBMISSION": return { label: "Re-submission Required", color: "bg-red-500/10 text-red-400 border-red-500/20", icon: <XCircle className="w-3 h-3" /> };
+      default: return { label: "Pending", color: "bg-amber-500/10 text-amber-400 border-amber-500/20", icon: <Clock className="w-3 h-3" /> };
+    }
+  };
+
   return (
     <div className="min-h-screen p-6 lg:p-10">
-      <div className="max-w-3xl mx-auto space-y-8">
+      <div className="max-w-4xl mx-auto space-y-8">
 
         {/* Back Link */}
         <Link
@@ -182,50 +213,51 @@ export default function TasksPage() {
           Back to Project
         </Link>
 
-        <div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">Tasks</h1>
-          <p className="text-zinc-400 mt-1">Manage your tasks in this list</p>
+        <div className="flex justify-between items-end">
+          <div>
+            <h1 className="text-4xl font-bold text-white tracking-tight">Tasks</h1>
+            <p className="text-zinc-400 mt-1">Manage deliverables and submissions</p>
+          </div>
         </div>
 
-        {/* CREATE TASK */}
-        <form onSubmit={handleCreateTask} className="bg-zinc-900/60 border border-zinc-800 rounded-2xl p-6 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-zinc-400 mb-2">Task Title</label>
-            <input
-              value={newTaskTitle}
-              onChange={(e) => setNewTaskTitle(e.target.value)}
-              placeholder="What needs to be done?"
-              required
-              className="w-full bg-zinc-800/50 border border-zinc-700 text-white rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-zinc-600 transition-all placeholder:text-zinc-600"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-zinc-400 mb-2">Description</label>
-            <textarea
-              value={newTaskDesc}
-              onChange={(e) => setNewTaskDesc(e.target.value)}
-              placeholder="Optional details..."
-              rows={3}
-              className="w-full bg-zinc-800/50 border border-zinc-700 text-white rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-zinc-600 transition-all placeholder:text-zinc-600 resize-none"
-            />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-zinc-400 mb-2">Due Date</label>
-              <input
-                type="date"
-                value={newTaskDueDate}
-                onChange={(e) => setNewTaskDueDate(e.target.value)}
-                className="w-full bg-zinc-800/50 border border-zinc-700 text-white rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-white/20 transition-all cursor-pointer"
-              />
-            </div>
-            {isAdmin && (
+        {/* CREATE TASK (ADMIN ONLY) */}
+        {isAdmin && (
+          <form onSubmit={handleCreateTask} className="bg-zinc-900/60 backdrop-blur-md border border-zinc-800/80 rounded-2xl p-6 space-y-4 shadow-xl">
+            <h3 className="text-lg font-semibold text-white flex items-center gap-2 mb-2">
+              <Plus className="w-5 h-5 text-emerald-400" /> Create New Assignment
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-4 md:col-span-2">
+                <input
+                  value={newTaskTitle}
+                  onChange={(e) => setNewTaskTitle(e.target.value)}
+                  placeholder="Task title..."
+                  required
+                  className="w-full bg-zinc-800/50 border border-zinc-700 text-white rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all placeholder:text-zinc-600"
+                />
+                <textarea
+                  value={newTaskDesc}
+                  onChange={(e) => setNewTaskDesc(e.target.value)}
+                  placeholder="Assignment instructions..."
+                  rows={2}
+                  className="w-full bg-zinc-800/50 border border-zinc-700 text-white rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all placeholder:text-zinc-600 resize-none"
+                />
+              </div>
               <div>
-                <label className="block text-sm font-medium text-zinc-400 mb-2">Assign To</label>
+                <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Due Date</label>
+                <input
+                  type="date"
+                  value={newTaskDueDate}
+                  onChange={(e) => setNewTaskDueDate(e.target.value)}
+                  className="w-full bg-zinc-800/50 border border-zinc-700 text-white rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all cursor-pointer"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Assign To</label>
                 <select
                   value={newTaskAssignedTo}
                   onChange={(e) => setNewTaskAssignedTo(e.target.value)}
-                  className="w-full bg-zinc-800/50 border border-zinc-700 text-white rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-white/20 transition-all cursor-pointer"
+                  className="w-full bg-zinc-800/50 border border-zinc-700 text-white rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all cursor-pointer"
                 >
                   <option value="">Myself</option>
                   {users.map(u => (
@@ -233,102 +265,164 @@ export default function TasksPage() {
                   ))}
                 </select>
               </div>
-            )}
-          </div>
-          <button
-            disabled={isCreating}
-            className="bg-white text-zinc-900 px-5 py-2.5 rounded-xl font-semibold hover:bg-zinc-100 transition-colors flex items-center gap-2 disabled:opacity-50"
-          >
-            {isCreating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-            Add Task
-          </button>
-        </form>
+            </div>
+            <button
+              disabled={isCreating}
+              className="bg-emerald-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-emerald-500 transition-all shadow-lg shadow-emerald-600/20 flex items-center gap-2 disabled:opacity-50"
+            >
+              {isCreating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+              Assign Task
+            </button>
+          </form>
+        )}
 
         {/* TASK LIST */}
-        {loading ? (
-          <div className="text-center py-10">
-            <Loader2 className="w-8 h-8 animate-spin text-zinc-500 mx-auto" />
-          </div>
-        ) : tasks.length === 0 ? (
-          <div className="bg-zinc-900/60 border border-zinc-800 rounded-xl p-8 text-center">
-            <CheckCircle2 className="w-12 h-12 text-zinc-600 mx-auto mb-4" />
-            <p className="text-zinc-500">No tasks yet. Create one above.</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {tasks.map((task) => (
-              <div
-                key={task.id}
-                className="bg-zinc-900/60 border border-zinc-800 rounded-xl p-5 space-y-4 hover:border-blue-500/30 hover:shadow-md hover:shadow-blue-500/5 transition-colors"
-              >
-                {/* EDIT TASK */}
-                <form
-                  onSubmit={(e) => handleUpdateTask(e, task.id)}
-                  className="space-y-3"
-                >
-                  <input
-                    name="title"
-                    defaultValue={task.title}
-                    className="w-full bg-zinc-800/50 border border-zinc-700 text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-white/20 transition-all font-medium"
-                    required
-                  />
-                  <textarea
-                    name="description"
-                    defaultValue={task.description ?? ""}
-                    rows={2}
-                    className="w-full bg-zinc-800/50 border border-zinc-700 text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-white/20 transition-all resize-none text-sm"
-                  />
-                  <button className="flex items-center gap-2 bg-zinc-800 text-zinc-300 px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-zinc-700 transition-colors">
-                    <Save className="w-3 h-3" />
-                    Save
-                  </button>
-                  {task.dueDate && (
-                    <div className="flex items-center gap-2 text-xs text-amber-400 mt-2">
-                      <Clock className="w-3 h-3" /> Due: {new Date(task.dueDate).toLocaleDateString()}
-                    </div>
-                  )}
-                  {task.assignedTo && (
-                    <div className="text-xs text-blue-400 mt-1">
-                      Assigned to: {task.assignedTo.name}
-                    </div>
-                  )}
-                </form>
+        <div className="space-y-6">
+          {loading ? (
+            <div className="text-center py-20">
+              <Loader2 className="w-10 h-10 animate-spin text-emerald-500 mx-auto" />
+            </div>
+          ) : tasks.length === 0 ? (
+            <div className="bg-zinc-900/40 border-2 border-dashed border-zinc-800 rounded-2xl p-20 text-center">
+              <FileText className="w-16 h-16 text-zinc-800 mx-auto mb-4" />
+              <p className="text-zinc-500 font-medium italic">No assignments found in this list.</p>
+            </div>
+          ) : (
+            tasks.map((task) => {
+              const status = getStatusDisplay(task.status);
+              const isAssignedToMe = task.assignedToId === user?.id;
 
-                {/* STATUS + DELETE */}
-                <div className="flex items-center justify-between pt-3 border-t border-zinc-800">
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleToggleStatus(task)}
-                      className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${task.status === "COMPLETED"
-                        ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20"
-                        : "bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20"
-                        }`}
-                    >
-                      {task.status === "COMPLETED" ? (
+              return (
+                <div
+                  key={task.id}
+                  className="bg-zinc-900/60 backdrop-blur-sm border border-zinc-800/80 rounded-2xl p-6 transition-all hover:border-zinc-700 relative group overflow-hidden shadow-xl"
+                >
+                  <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 relative z-10">
+                    <div className="flex-1 space-y-4">
+                      {/* TASK INFO */}
+                      <div>
+                        {isAdmin ? (
+                          <form
+                            onSubmit={(e) => handleUpdateTask(e, task.id)}
+                            className="space-y-3"
+                          >
+                            <input
+                              name="title"
+                              defaultValue={task.title}
+                              className="w-full bg-transparent border-none text-xl font-bold text-white p-0 focus:ring-0"
+                            />
+                            <textarea
+                              name="description"
+                              defaultValue={task.description ?? ""}
+                              className="w-full bg-transparent border-none text-zinc-400 p-0 focus:ring-0 text-sm resize-none"
+                              rows={2}
+                            />
+                            <button className="hidden group-hover:flex items-center gap-2 bg-zinc-800/50 text-zinc-400 px-3 py-1 rounded-lg text-xs hover:bg-zinc-700 hover:text-white transition-all">
+                              <Save className="w-3 h-3" /> Save Changes
+                            </button>
+                          </form>
+                        ) : (
+                          <>
+                            <h3 className="text-xl font-bold text-white">{task.title}</h3>
+                            <p className="text-zinc-400 text-sm mt-1">{task.description || "No specific instructions provided."}</p>
+                          </>
+                        )}
+                      </div>
+
+                      {/* TASK METADATA */}
+                      <div className="flex flex-wrap items-center gap-4 text-xs font-semibold uppercase tracking-widest text-zinc-500">
+                        {task.dueDate && (
+                          <div className="flex items-center gap-2 text-amber-500/80">
+                            <Clock className="w-3.5 h-3.5" /> Due: {new Date(task.dueDate).toLocaleDateString()}
+                          </div>
+                        )}
+                        {task.assignedTo && (
+                          <div className="flex items-center gap-2 text-blue-400/80">
+                            <Users className="w-3.5 h-3.5" /> {task.assignedTo.name}
+                          </div>
+                        )}
+                        <span className={`flex items-center gap-1.5 px-3 py-1 rounded-full border ${status.color}`}>
+                          {status.icon} {status.label}
+                        </span>
+                      </div>
+
+                      {/* SUBMISSION DISPLAY */}
+                      {task.submissionUrl && (
+                        <div className="flex items-center gap-3 p-3 bg-zinc-800/40 rounded-xl border border-zinc-700/50 w-fit">
+                          <FileText className="w-5 h-5 text-blue-400" />
+                          <div>
+                            <p className="text-xs font-bold text-zinc-300">Submitted Deliverable</p>
+                            <Link
+                              href={task.submissionUrl}
+                              target="_blank"
+                              className="text-xs text-blue-400 hover:underline flex items-center gap-1 mt-0.5"
+                            >
+                              View Document <ExternalLink className="w-3 h-3" />
+                            </Link>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* ACTIONS */}
+                    <div className="flex md:flex-col gap-2 shrink-0">
+                      {/* UPLOAD BUTTON (USER) */}
+                      {!isAdmin && isAssignedToMe && (task.status === "PENDING" || task.status === "RE_SUBMISSION") && (
                         <>
-                          <CheckCircle2 className="w-3 h-3" />
-                          Completed
-                        </>
-                      ) : (
-                        <>
-                          <Clock className="w-3 h-3" />
-                          Pending
+                          <input
+                            type="file"
+                            className="hidden"
+                            ref={fileInputRef}
+                            accept=".pdf,.doc,.docx,.zip"
+                            onChange={(e) => e.target.files?.[0] && handleFileUpload(task.id, e.target.files[0])}
+                          />
+                          <button
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={uploadingId === task.id}
+                            className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-blue-600/20 disabled:opacity-50"
+                          >
+                            {uploadingId === task.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                            Upload Work
+                          </button>
                         </>
                       )}
-                    </button>
-                  </div>
 
-                  <button
-                    onClick={() => handleDeleteTask(task.id)}
-                    className="p-2 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                      {/* REVIEW ACTIONS (ADMIN) */}
+                      {isAdmin && task.status === "UPLOADED" && (
+                        <div className="space-y-2 flex flex-col">
+                          <button
+                            onClick={() => updateTaskStatus(task.id, "COMPLETED")}
+                            className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-600/20"
+                          >
+                            <CheckCircle2 className="w-4 h-4" /> Approve
+                          </button>
+                          <button
+                            onClick={() => updateTaskStatus(task.id, "RE_SUBMISSION")}
+                            className="bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-red-600/20"
+                          >
+                            <XCircle className="w-4 h-4" /> Reject (Re-submit)
+                          </button>
+                        </div>
+                      )}
+
+                      {/* DELETE (ADMIN) */}
+                      {isAdmin && (
+                        <button
+                          onClick={() => handleDeleteTask(task.id)}
+                          className="p-3 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-all self-end md:self-auto"
+                          title="Discard Task"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <div className={`absolute top-0 right-0 w-24 h-24 blur-[80px] -z-0 opacity-20 pointer-events-none transition-colors ${task.status === "COMPLETED" ? "bg-emerald-500" : task.status === "UPLOADED" ? "bg-blue-500" : task.status === "RE_SUBMISSION" ? "bg-red-500" : "bg-amber-500"}`} />
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
+              );
+            })
+          )}
+        </div>
       </div>
     </div>
   );

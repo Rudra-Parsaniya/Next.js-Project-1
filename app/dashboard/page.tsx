@@ -18,8 +18,6 @@ import {
   Pin
 } from "lucide-react";
 
-import Background from "../components/Background";
-
 export default function DashboardPage() {
   // ... existing hooks ...
   const [stats, setStats] = React.useState<any>(null);
@@ -70,7 +68,6 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen p-6 lg:p-10 relative">
-      <Background />
       <div className="max-w-[1400px] mx-auto space-y-8 relative z-10">
 
         {/* HEADER SECTION */}
@@ -139,7 +136,10 @@ export default function DashboardPage() {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-zinc-500">{stats.completedTasks} of {stats.totalTasks} tasks completed</span>
-                  <span className="text-emerald-400 font-medium">+12% from last week</span>
+                  <span className="text-emerald-400 font-medium">
+                    {stats.weeklyDelta >= 0 ? "+" : ""}
+                    {stats.weeklyDelta}% from last week
+                  </span>
                 </div>
               </div>
             </div>
@@ -154,10 +154,18 @@ export default function DashboardPage() {
               </Link>
             </div>
             <div className="space-y-4">
-              <ActivityItem title="New task created" description="Design system updates" time="2h ago" color="blue" />
-              <ActivityItem title="Project completed" description="Website redesign" time="5h ago" color="emerald" />
-              <ActivityItem title="Task updated" description="API integration" time="1d ago" color="amber" />
-              <ActivityItem title="Comment added" description="Review feedback" time="2d ago" color="violet" />
+              {(stats.recentActivities ?? []).map((item: any) => (
+                <ActivityItem
+                  key={item.id}
+                  title={item.title}
+                  description={`${item.description} · ${item.projectName}`}
+                  time={timeAgo(item.updatedAt)}
+                  color={item.status === "COMPLETED" ? "emerald" : item.status === "IN_PROGRESS" ? "blue" : "amber"}
+                />
+              ))}
+              {(!stats.recentActivities || stats.recentActivities.length === 0) && (
+                <p className="text-sm text-zinc-500">No recent activity yet.</p>
+              )}
             </div>
           </div>
         </section>
@@ -315,4 +323,16 @@ function ActivityItem({
       <span className="text-xs text-zinc-600 shrink-0">{time}</span>
     </div>
   );
+}
+
+function timeAgo(date: string | Date) {
+  const d = new Date(date);
+  const diff = Date.now() - d.getTime();
+  const min = Math.floor(diff / 60000);
+  if (min < 1) return "just now";
+  if (min < 60) return `${min}m ago`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}h ago`;
+  const day = Math.floor(hr / 24);
+  return `${day}d ago`;
 }

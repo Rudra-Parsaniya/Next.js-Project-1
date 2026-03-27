@@ -3,8 +3,7 @@
 import { cookies } from "next/headers";
 import { prisma } from "./prisma";
 import { randomUUID } from "crypto";
-
-export const SESSION_NAME = "session_token";
+import { SESSION_NAME } from "./session";
 
 // Create a new session for a user
 export async function createSession(userId: number) {

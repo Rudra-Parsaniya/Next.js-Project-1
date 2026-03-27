@@ -14,12 +14,21 @@ export async function GET(request: Request) {
             return NextResponse.json({ error: "Project ID required" }, { status: 400 });
         }
 
+        const isAdmin = user.roles?.some((r: any) => r.role.name === "ADMIN") ?? false;
+
         const lists = await prisma.taskList.findMany({
             where: {
                 projectId: Number(projectId),
-                project: {
-                    createdById: user.id,
-                },
+                ...(isAdmin
+                    ? {}
+                    : {
+                        project: {
+                            OR: [
+                                { createdById: user.id },
+                                { assignedToId: user.id },
+                            ],
+                        },
+                    }),
             },
             orderBy: { createdAt: "asc" },
         });
@@ -46,7 +55,10 @@ export async function POST(request: Request) {
             where: { id: Number(projectId) },
         });
 
-        if (!project || project.createdById !== user.id) {
+        const isAdmin = user.roles?.some((r: any) => r.role.name === "ADMIN") ?? false;
+        const canManage = project && (project.createdById === user.id || project.assignedToId === user.id);
+
+        if (!project || (!isAdmin && !canManage)) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 
@@ -80,7 +92,10 @@ export async function DELETE(request: Request) {
             include: { project: true },
         });
 
-        if (!list || list.project.createdById !== user.id) {
+        const isAdmin = user.roles?.some((r: any) => r.role.name === "ADMIN") ?? false;
+        const canManage = list && (list.project.createdById === user.id || list.project.assignedToId === user.id);
+
+        if (!list || (!isAdmin && !canManage)) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 

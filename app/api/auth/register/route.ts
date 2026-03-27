@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
-import { createSession, getUserFromSession, isUserAdmin, SESSION_NAME } from "@/lib/auth";
+import { createSession, getUserFromSession, isUserAdmin } from "@/lib/auth";
+import { SESSION_NAME } from "@/lib/session";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 

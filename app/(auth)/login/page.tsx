@@ -76,6 +76,7 @@ export default function LoginPage() {
               name="email"
               type="email"
               required
+              suppressHydrationWarning
               className="w-full bg-zinc-800/50 border border-zinc-700 text-white rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/50 hover:border-zinc-500 hover:bg-zinc-800/70 transition-all placeholder:text-zinc-600"
               placeholder="name@example.com"
             />
@@ -90,6 +91,7 @@ export default function LoginPage() {
               name="password"
               type="password"
               required
+              suppressHydrationWarning
               className="w-full bg-zinc-800/50 border border-zinc-700 text-white rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/50 hover:border-zinc-500 hover:bg-zinc-800/70 transition-all placeholder:text-zinc-600"
               placeholder="••••••••"
             />
@@ -101,20 +103,21 @@ export default function LoginPage() {
             </div>
           )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 text-white font-semibold rounded-xl px-4 py-3.5 hover:bg-blue-500 transition-all shadow-lg shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Signing in...
-              </>
-            ) : (
-              "Sign in"
-            )}
-          </button>
+            <button
+              type="submit"
+              disabled={loading}
+              suppressHydrationWarning
+              className="w-full bg-blue-600 text-white font-semibold rounded-xl px-4 py-3.5 hover:bg-blue-500 transition-all shadow-lg shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Signing in...
+                </>
+              ) : (
+                "Sign in"
+              )}
+            </button>
         </form>
 
         <div className="mt-6 text-center">

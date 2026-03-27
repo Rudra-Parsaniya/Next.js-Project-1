@@ -24,7 +24,13 @@ export async function PUT(
 
         if (!task) return NextResponse.json({ error: "Task not found" }, { status: 404 });
 
-        if (task.list?.project.createdById !== user.id) {
+        const isAdmin = user.roles?.some((r: any) => r.role.name === "ADMIN") ?? false;
+        const canManage =
+            task.list?.project.createdById === user.id ||
+            task.list?.project.assignedToId === user.id ||
+            task.assignedToId === user.id;
+
+        if (!isAdmin && !canManage) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 
@@ -33,6 +39,7 @@ export async function PUT(
         if (description !== undefined) updateData.description = description;
         if (status !== undefined) updateData.status = status;
         if (pinned !== undefined) updateData.pinned = pinned;
+        if (body.submissionUrl !== undefined) updateData.submissionUrl = body.submissionUrl;
 
         const updatedTask = await prisma.task.update({
             where: { id: taskId },
@@ -64,7 +71,13 @@ export async function DELETE(
 
         if (!task) return NextResponse.json({ error: "Task not found" }, { status: 404 });
 
-        if (task.list?.project.createdById !== user.id) {
+        const isAdmin = user.roles?.some((r: any) => r.role.name === "ADMIN") ?? false;
+        const canManage =
+            task.list?.project.createdById === user.id ||
+            task.list?.project.assignedToId === user.id ||
+            task.assignedToId === user.id;
+
+        if (!isAdmin && !canManage) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 

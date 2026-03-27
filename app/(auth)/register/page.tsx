@@ -75,6 +75,7 @@ export default function RegisterPage() {
                 name="name"
                 placeholder="John Doe"
                 required
+                suppressHydrationWarning
                 className="w-full bg-zinc-800/50 border border-zinc-700 text-white rounded-xl pl-11 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/50 hover:border-zinc-500 hover:bg-zinc-800/70 transition-all placeholder:text-zinc-600"
               />
             </div>
@@ -91,6 +92,7 @@ export default function RegisterPage() {
                 name="email"
                 placeholder="you@example.com"
                 required
+                suppressHydrationWarning
                 className="w-full bg-zinc-800/50 border border-zinc-700 text-white rounded-xl pl-11 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/50 hover:border-zinc-500 hover:bg-zinc-800/70 transition-all placeholder:text-zinc-600"
               />
             </div>
@@ -107,6 +109,7 @@ export default function RegisterPage() {
                 name="password"
                 placeholder="••••••••"
                 required
+                suppressHydrationWarning
                 className="w-full bg-zinc-800/50 border border-zinc-700 text-white rounded-xl pl-11 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/50 hover:border-zinc-500 hover:bg-zinc-800/70 transition-all placeholder:text-zinc-600"
               />
             </div>
@@ -122,6 +125,7 @@ export default function RegisterPage() {
                 type="text"
                 name="contactNo"
                 placeholder="+91 98765 43210"
+                suppressHydrationWarning
                 className="w-full bg-zinc-800/50 border border-zinc-700 text-white rounded-xl pl-11 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/50 hover:border-zinc-500 hover:bg-zinc-800/70 transition-all placeholder:text-zinc-600"
               />
             </div>
@@ -137,6 +141,7 @@ export default function RegisterPage() {
                 <input
                   type="date"
                   name="birthDate"
+                  suppressHydrationWarning
                   className="w-full bg-zinc-800/50 border border-zinc-700 text-white rounded-xl pl-11 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/50 hover:border-zinc-500 hover:bg-zinc-800/70 transition-all"
                 />
               </div>
@@ -152,6 +157,7 @@ export default function RegisterPage() {
                   type="text"
                   name="nationality"
                   placeholder="Indian"
+                  suppressHydrationWarning
                   className="w-full bg-zinc-800/50 border border-zinc-700 text-white rounded-xl pl-11 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/50 hover:border-zinc-500 hover:bg-zinc-800/70 transition-all placeholder:text-zinc-600"
                 />
               </div>
@@ -166,6 +172,7 @@ export default function RegisterPage() {
               <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
               <select
                 name="gender"
+                suppressHydrationWarning
                 className="w-full bg-zinc-800/50 border border-zinc-700 text-white rounded-xl pl-11 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/50 hover:border-zinc-500 hover:bg-zinc-800/70 transition-all appearance-none cursor-pointer"
               >
                 <option value="" className="bg-zinc-900">Select Gender</option>
@@ -179,6 +186,7 @@ export default function RegisterPage() {
           <button
             type="submit"
             disabled={loading}
+            suppressHydrationWarning
             className="w-full bg-blue-600 text-white py-3.5 rounded-xl font-semibold hover:bg-blue-500 transition-all shadow-lg shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-2"
           >
             {loading ? (

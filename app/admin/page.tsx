@@ -13,7 +13,6 @@ import {
   ArrowUpRight,
   Search
 } from "lucide-react";
-import Background from "../components/Background";
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState<any>(null);
@@ -51,7 +50,6 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen p-6 lg:p-10 relative">
-      <Background />
       <div className="max-w-[1400px] mx-auto space-y-8 relative z-10">
         <header>
           <h1 className="text-4xl font-bold text-white tracking-tight">

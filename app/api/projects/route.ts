@@ -25,8 +25,8 @@ export async function GET() {
                 ]
             },
             include: {
-                createdBy: { select: { name: true } },
-                assignedTo: { select: { name: true } }
+                createdBy: { select: { id: true, name: true } },
+                assignedTo: { select: { id: true, name: true } }
             },
             orderBy: { createdAt: "desc" },
         });

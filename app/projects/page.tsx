@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Plus, FolderKanban, Pencil, Trash2, ArrowRight, FolderOpen, Loader2 } from "lucide-react";
+import { Plus, FolderKanban, Pencil, Trash2, ArrowRight, FolderOpen, Loader2, Search, Users, Calendar } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -12,17 +12,38 @@ interface Project {
   createdAt: string;
   updatedAt: string;
   createdById: number;
+  createdBy?: {
+    id: number;
+    name: string;
+  };
 }
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const router = useRouter();
 
   useEffect(() => {
-    fetchProjects();
+    async function init() {
+      await Promise.all([fetchProjects(), fetchUser()]);
+    }
+    init();
   }, []);
+
+  async function fetchUser() {
+    try {
+      const res = await fetch("/api/auth/me");
+      if (res.ok) {
+        const data = await res.json();
+        setCurrentUser(data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch user", error);
+    }
+  }
 
   async function fetchProjects() {
     try {
@@ -38,24 +59,13 @@ export default function ProjectsPage() {
     }
   }
 
+  const isAdmin = currentUser?.roles?.some((r: any) => r.role.name === "ADMIN");
+
   async function handleDelete(projectId: number) {
     if (!confirm("Are you sure you want to delete this project?")) return;
 
     setDeletingId(projectId);
     try {
-      const response = await fetch(`/api/projects?projectId=${projectId}`, {
-        method: "DELETE",
-      });
-      // Note: The API at /api/projects/route.ts seems to support DELETE? 
-      // Wait, checking api/projects/route.ts ... it only had GET and POST. 
-      // The delete logic was in actions.ts.
-      // I need to check if /api/projects supports DELETE or if I need to use /api/projects/[id].
-      // Usually it's /api/projects/[id].
-
-      // Let's assume /api/projects/[id] exists or I should use it.
-      // The DeleteProjectButton used `/api/projects/${projectId}`.
-      // So I will use that here too.
-
       const res = await fetch(`/api/projects/${projectId}`, {
         method: "DELETE"
       });
@@ -74,6 +84,12 @@ export default function ProjectsPage() {
     }
   }
 
+  const filteredProjects = Array.isArray(projects) ? projects.filter(project =>
+    (project.name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (project.description || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (project.createdBy?.name || "").toLowerCase().includes(searchQuery.toLowerCase())
+  ) : [];
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -87,9 +103,9 @@ export default function ProjectsPage() {
       <div className="max-w-[1400px] mx-auto space-y-8">
 
         {/* HEADER */}
-        <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-white tracking-tight">
+            <h1 className="text-4xl font-bold text-white tracking-tight">
               Projects
             </h1>
             <p className="text-zinc-400 mt-1">
@@ -97,13 +113,25 @@ export default function ProjectsPage() {
             </p>
           </div>
 
-          <Link
-            href="/projects/new"
-            className="group flex items-center gap-2 bg-white text-zinc-900 px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-zinc-100 transition-all shadow-lg shadow-white/5"
-          >
-            <Plus className="w-4 h-4 group-hover:rotate-90 transition-transform duration-200" />
-            New Project
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/projects/new"
+              className="group flex items-center gap-2 bg-white text-zinc-900 px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-zinc-100 transition-all shadow-lg shadow-white/5"
+            >
+              <Plus className="w-4 h-4 group-hover:rotate-90 transition-transform duration-200" />
+              New Project
+            </Link>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+              <input
+                type="text"
+                placeholder="Search projects..."
+                className="bg-black/40 border border-zinc-800 rounded-lg pl-10 pr-4 py-2 text-sm text-white focus:outline-none focus:border-blue-500 w-full md:w-64 transition-all"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+          </div>
         </header>
 
         {/* EMPTY STATE */}
@@ -124,72 +152,102 @@ export default function ProjectsPage() {
             </Link>
           </div>
         ) : (
-          /* PROJECT GRID */
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {projects.map((project) => (
-              <div
-                key={project.id}
-                className="group relative bg-zinc-900/60 backdrop-blur-sm rounded-2xl border border-zinc-800/80 p-6 hover:border-blue-500/30 hover:shadow-lg hover:shadow-blue-500/5 hover:bg-zinc-900/90 transition-all duration-300 flex flex-col justify-between"
-              >
-                <div>
-                  {/* TOP */}
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="p-3 bg-indigo-500/10 rounded-xl text-indigo-400 border border-indigo-500/20">
-                      <FolderKanban className="w-6 h-6" />
-                    </div>
-
-                    {/* ACTIONS */}
-                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Link
-                        href={`/projects/${project.id}/edit`}
-                        className="p-2 rounded-lg text-zinc-500 hover:text-blue-400 hover:bg-blue-500/10 transition"
-                        title="Edit Project"
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </Link>
-                      <button
-                        onClick={() => handleDelete(project.id)}
-                        disabled={deletingId === project.id}
-                        className="p-2 rounded-lg text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition disabled:opacity-50"
-                        title="Delete Project"
-                      >
-                        {deletingId === project.id ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Trash2 className="w-4 h-4" />
-                        )}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* CONTENT */}
-                  <Link href={`/projects/${project.id}`} className="block">
-                    <h2 className="text-xl font-semibold text-white group-hover:text-indigo-400 transition-colors">
-                      {project.name}
-                    </h2>
-                    <p className="text-sm text-zinc-500 mt-2 line-clamp-2">
-                      {project.description ||
-                        "No description provided for this project."}
-                    </p>
-                  </Link>
+          /* PROJECT TABLE */
+          <div className="bg-zinc-900/60 backdrop-blur-sm border border-zinc-800/80 rounded-2xl overflow-hidden shadow-2xl">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-zinc-800/50 bg-white/5">
+                    <th className="px-6 py-4 text-xs font-semibold text-zinc-400 uppercase tracking-widest">Project Info</th>
+                    <th className="px-6 py-4 text-xs font-semibold text-zinc-400 uppercase tracking-widest">Description</th>
+                    {isAdmin && (
+                      <th className="px-6 py-4 text-xs font-semibold text-zinc-400 uppercase tracking-widest">Owner</th>
+                    )}
+                    <th className="px-6 py-4 text-xs font-semibold text-zinc-400 uppercase tracking-widest">Created</th>
+                    <th className="px-6 py-4 text-xs font-semibold text-zinc-400 uppercase tracking-widest text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-800/30">
+                  {filteredProjects.map((project) => (
+                    <tr key={project.id} className="hover:bg-white/[0.02] transition-colors group">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2.5 bg-indigo-500/10 rounded-lg text-indigo-400 border border-indigo-500/20">
+                            <FolderKanban className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <Link href={`/projects/${project.id}`} className="text-sm font-semibold text-white hover:text-indigo-400 transition-colors">
+                              {project.name}
+                            </Link>
+                            <p className="text-[10px] text-zinc-600 font-bold tracking-widest mt-0.5">ID: {project.id}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <p className="text-xs text-zinc-500 line-clamp-1 max-w-[200px]">
+                          {project.description || "No description provided."}
+                        </p>
+                      </td>
+                      {isAdmin && (
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-blue-500 flex items-center justify-center text-white text-xs font-bold shadow-lg">
+                              {project.createdBy?.name?.charAt(0) || "?"}
+                            </div>
+                            <div>
+                              <p className="text-sm font-semibold text-white">{project.createdBy?.name || "Unknown"}</p>
+                              <p className="text-[10px] text-zinc-500">UID: {project.createdBy?.id || "N/A"}</p>
+                            </div>
+                          </div>
+                        </td>
+                      )}
+                      <td className="px-6 py-4 text-xs text-zinc-500 whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="w-3 h-3 text-zinc-600" />
+                          {new Date(project.createdAt).toLocaleDateString()}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Link
+                            href={`/projects/${project.id}`}
+                            className="p-2 hover:bg-blue-500/10 text-zinc-500 hover:text-blue-400 rounded-lg transition-all"
+                            title="View Tasks"
+                          >
+                            <ArrowRight className="w-4 h-4" />
+                          </Link>
+                          <Link
+                            href={`/projects/${project.id}/edit`}
+                            className="p-2 hover:bg-amber-500/10 text-zinc-500 hover:text-amber-400 rounded-lg transition-all"
+                            title="Edit Project"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </Link>
+                          <button
+                            onClick={() => handleDelete(project.id)}
+                            disabled={deletingId === project.id}
+                            className="p-2 hover:bg-red-500/10 text-zinc-500 hover:text-red-400 rounded-lg transition-all disabled:opacity-50"
+                            title="Delete Project"
+                          >
+                            {deletingId === project.id ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="w-4 h-4" />
+                            )}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {filteredProjects.length === 0 && (
+                <div className="p-20 text-center">
+                  <FolderOpen className="w-12 h-12 text-zinc-700 mx-auto mb-4" />
+                  <p className="text-zinc-500">No projects found matching your search.</p>
                 </div>
-
-                {/* FOOTER */}
-                <div className="mt-6 pt-4 border-t border-zinc-800 flex justify-between items-center">
-                  <Link
-                    href={`/projects/${project.id}`}
-                    className="text-sm font-semibold text-zinc-400 hover:text-white flex items-center gap-1 group/btn transition-colors"
-                  >
-                    View Tasks
-                    <ArrowRight className="w-4 h-4 transition-transform group-hover/btn:translate-x-1" />
-                  </Link>
-
-                  <span className="text-[10px] font-bold tracking-widest text-zinc-600">
-                    ID · {project.id}
-                  </span>
-                </div>
-              </div>
-            ))}
+              )}
+            </div>
           </div>
         )}
       </div>

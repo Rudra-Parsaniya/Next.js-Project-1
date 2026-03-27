@@ -12,7 +12,6 @@ import {
     Calendar,
     Globe
 } from "lucide-react";
-import Background from "../../components/Background";
 
 export default function AdminUsersPage() {
     const [users, setUsers] = useState<any[]>([]);
@@ -110,7 +109,6 @@ export default function AdminUsersPage() {
 
     return (
         <div className="min-h-screen p-6 lg:p-10 relative">
-            <Background />
             <div className="max-w-[1400px] mx-auto space-y-8 relative z-10">
                 <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
